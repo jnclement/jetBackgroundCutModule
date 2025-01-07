@@ -36,7 +36,7 @@ class jetBackgroundCut : public SubsysReco
 
  private:
   unsigned char _cutBits;
-  _recoConsts *rc;
+  recoConsts *rc;
 };
 
 #endif // R24TREEMAKER
