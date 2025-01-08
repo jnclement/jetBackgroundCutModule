@@ -12,23 +12,23 @@ class jetBackgroundCut : public SubsysReco
 {
  public:
 
-  jetBackgroundCut(const std::string &name = "jetBackgroundCutModule", const bool debug = 0, const bool doAbort = 0);
+  jetBackgroundCut(const std::string jetNodeName, const std::string &name = "jetBackgroundCutModule", const int debug = 0, const bool doAbort = 0);
 
   virtual ~jetBackgroundCut();
 
   bool failsLoEmFracETCut(float emFrac, float ET, bool dPhiCut, bool isDijet)
   {
-    return (frcem < 0.1 && jet_ET > (50*frcem+20)) && (dPhiCut || !isDijet);
+    return (emFrac < 0.1 && ET > (50*emFrac+20)) && (dPhiCut || !isDijet);
   }
 
-  bool failsHiEmFracETCut(float emFrac, float ET, bool dPhiCut, bool isDijet);
+  bool failsHiEmFracETCut(float emFrac, float ET, bool dPhiCut, bool isDijet)
   {
-    return (frcem > 0.9 && jet_ET > (-50*frcem+70)) && (dPhiCut || !isDijet);
+    return (emFrac > 0.9 && ET > (-50*emFrac+70)) && (dPhiCut || !isDijet);
   }
 
-  bool failsIhFracCut(float emFrac, float ohFrac);
+  bool failsIhFracCut(float emFrac, float ohFrac)
   {
-    return frcem + frcoh < 0.65;
+    return emFrac + ohFrac < 0.65;
   }
 
   bool failsdPhiCut(float dPhi, bool isDijet)
@@ -52,8 +52,10 @@ class jetBackgroundCut : public SubsysReco
  private:
   recoConsts *_rc;
   bool _doAbort;
-  string _name;
-  bool _debug;
+  std::string _name;
+  int _debug;
+  bool _missingInfoWarningPrinted = false;
+  std::string _jetNodeName;
 };
 
 #endif // R24TREEMAKER

@@ -34,8 +34,8 @@ libjetbackgroundcut_io_la_LIBADD = \
 libjetbackgroundcut_la_LIBADD = \
   libjetbackgroundcut_io.la \
   -lcalo_io \
-  -lSubsysReco -lphg4hit -lffaobjects -lmbd_io \
-  -ljetbase -lglobalvertex -lcentrality -lcalotrigger 
+  -lSubsysReco -lffaobjects -lmbd_io \
+  -ljetbase -lglobalvertex
 #-lg4jets_io
 %_Dict.cc: %.h %LinkDef.h
 	rootcint -f $@ @CINTDEFS@ $(DEFAULT_INCLUDES) $(AM_CPPFLAGS) $^

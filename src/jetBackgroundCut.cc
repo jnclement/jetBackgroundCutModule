@@ -23,12 +23,13 @@
 using namespace std;
 
 //____________________________________________________________________________..
-jetBackgroundCut::jetBackgroundCut(const std::string &name, const bool debug, const bool doAbort):
-  SubsysReco("test")//).c_str())
+jetBackgroundCut::jetBackgroundCut(const std::string jetNodeName, const std::string &name, const int debug, const bool doAbort):
+  SubsysReco(name)//).c_str())
 {
   _name = name;
   _debug = debug;
   _doAbort = doAbort;
+  _jetNodeName = jetNodeName;
 }
 
 //____________________________________________________________________________..
@@ -51,14 +52,14 @@ int jetBackgroundCut::process_event(PHCompositeNode *topNode)
 {
 
   TowerInfoContainer *towersEM = findNode::getClass<TowerInfoContainer>(topNode, "TOWERINFO_CALIB_CEMC_RETOWER");
-  TowerInfoContainer *towersIH = findNode::getClass<TowerInfoContainer>(topNode, "TOWERINFO_CALIB_HCALIN");
+  //TowerInfoContainer *towersIH = findNode::getClass<TowerInfoContainer>(topNode, "TOWERINFO_CALIB_HCALIN");
   TowerInfoContainer *towersOH = findNode::getClass<TowerInfoContainer>(topNode, "TOWERINFO_CALIB_HCALOUT");
-  JetContainer *jets = findNode::getClass<JetContainerv1>(topNode, "AntiKt_Tower_HIRecoSeedsRaw_r04");
+  JetContainer *jets = findNode::getClass<JetContainerv1>(topNode, _jetNodeName);
   MbdVertexMap* mbdvtxmap = findNode::getClass<MbdVertexMapv1>(topNode, "MbdVertexMap");
   GlobalVertexMap* gvtxmap = findNode::getClass<GlobalVertexMapv1>(topNode, "GlobalVertexMap");
 
   RawTowerGeomContainer *geom[3];
-  geom[0] = findNode::getClass<RawTowerGeomContainer>(topNode, "TOWERGEOM_CEMC");
+  //geom[0] = findNode::getClass<RawTowerGeomContainer>(topNode, "TOWERGEOM_CEMC");
   geom[1] = findNode::getClass<RawTowerGeomContainer>(topNode, "TOWERGEOM_HCALIN");
   geom[2] = findNode::getClass<RawTowerGeomContainer>(topNode, "TOWERGEOM_HCALOUT");
 
@@ -67,18 +68,23 @@ int jetBackgroundCut::process_event(PHCompositeNode *topNode)
   float maxJetEta = NAN;
   float maxJetPhi = NAN;
   float subJetET = 0;
-  float subJetEta = NAN;
   float subJetPhi = NAN;
   float frcem = 0;
   float frcoh = 0;
   float dPhi = NAN;
 
-  if(_datorsim || !gvtxmap)
+  if(!towersEM || !towersOH || !geom[1] || !geom[2] || (!mbdvtxmap && !gvtxmap))
+    {
+      if(_debug > 0) cerr << "Missing critical info; abort event. Further warnings will be suppressed. AddressOf towersEM/towersOH/geomIH/geomOH/mbdvtxmap/gvtxmap : " << towersEM << "/" << towersOH << "/" << geom[1] << "/" << geom[2] << "/" << mbdvtxmap << "/" << gvtxmap << endl;
+      _missingInfoWarningPrinted = true;
+      return Fun4AllReturnCodes::ABORTEVENT;
+    }
+
+  if(!gvtxmap)
     {
       auto mbdVtxMapStart = mbdvtxmap->begin();
       MbdVertex* mbdvtx = mbdVtxMapStart->second;
       zvtx = mbdvtx->get_z();
-      break;
     }
   else if(gvtxmap)
     {
@@ -90,7 +96,7 @@ int jetBackgroundCut::process_event(PHCompositeNode *topNode)
   if(zvtx == NAN)
     {
       cout << "ERROR: NO ZVTX! ABORT EVENT" << endl;
-      Fun4AllReturnCodes::ABORTEVENT;
+      return Fun4AllReturnCodes::ABORTEVENT;
     }
   if(jets)
     {
@@ -118,7 +124,6 @@ int jetBackgroundCut::process_event(PHCompositeNode *topNode)
 	    {
 	      subJetET = maxJetET;
 	      subJetPhi = maxJetPhi;
-	      subJetEta = maxJetEta;
 	      maxJetET = jetET;
 	      maxJetPhi = jetPhi;
 	      maxJetEta = jetEta;
@@ -127,7 +132,6 @@ int jetBackgroundCut::process_event(PHCompositeNode *topNode)
 	    {
 	      subJetET = jetET;
 	      subJetPhi = jetPhi;
-	      subJetEta = jetEta;
 	      continue;
 	    }
 	  else
@@ -173,7 +177,8 @@ int jetBackgroundCut::process_event(PHCompositeNode *topNode)
     }
   else
     {
-      if(_debug > 1) cout << "No jet node!" << endl;
+      if(_debug > 0) cout << "No jet node!" << endl;
+      return Fun4AllReturnCodes::ABORTEVENT;
     }
   
   bool isDijet = false;
@@ -181,21 +186,21 @@ int jetBackgroundCut::process_event(PHCompositeNode *topNode)
     {
       isDijet = true;
       dPhi = abs(maxJetPhi - subJetPhi);
-      if(dPhi > M_PI) dphi = 2*M_PI - dPhi;
+      if(dPhi > M_PI) dPhi = 2*M_PI - dPhi;
     }
   bool dPhiCut = failsdPhiCut(dPhi, isDijet);
 
   bool failsLoEm = failsLoEmFracETCut(frcem, maxJetET, dPhiCut, isDijet);
   bool failsHiEm = failsHiEmFracETCut(frcem, maxJetET, dPhiCut, isDijet);
   bool failsIhCut = failsIhFracCut(frcem, frcoh);
-  bool failsAnyCut = failsLoEM || failsHiEM || failsIhCut;
+  bool failsAnyCut = failsLoEm || failsHiEm || failsIhCut;
 
   if(failsAnyCut && _doAbort) return Fun4AllReturnCodes::ABORTEVENT;
 
   _rc->set_IntFlag("failsLoEmJetCut",failsLoEm);
   _rc->set_IntFlag("failsHiEmJetCut",failsHiEm);
   _rc->set_IntFlag("failsIhJetCut",failsIhCut);
-  _rc->set_IntFlag("failsAnyJetCut",failsAnyJetCut);
+  _rc->set_IntFlag("failsAnyJetCut",failsAnyCut);
 
   return Fun4AllReturnCodes::EVENT_OK;
     
