@@ -3,6 +3,7 @@
 
 #include <fun4all/SubsysReco.h>
 #include <string>
+#include <cmath>
 #include <phool/recoConsts.h>
 
 class PHCompositeNode;
@@ -11,15 +12,29 @@ class jetBackgroundCut : public SubsysReco
 {
  public:
 
-  jetBackgroundCut(const std::string &name = "jetBackgroundCut", const int debug = 0, const int doAbort = 0);
+  jetBackgroundCut(const std::string &name = "jetBackgroundCutModule", const bool debug = 0, const bool doAbort = 0);
 
   virtual ~jetBackgroundCut();
 
-  int failsEmFracHiETCut(float emFrac, float ET);
+  bool failsLoEmFracETCut(float emFrac, float ET, bool dPhiCut, bool isDijet)
+  {
+    return (frcem < 0.1 && jet_ET > (50*frcem+20)) && (dPhiCut || !isDijet);
+  }
 
-  int failsEmFracLoETCut(float emFrac, float ET);
- 
-  int failsIhFracCut(float emFrac, float ohFrac);
+  bool failsHiEmFracETCut(float emFrac, float ET, bool dPhiCut, bool isDijet);
+  {
+    return (frcem > 0.9 && jet_ET > (-50*frcem+70)) && (dPhiCut || !isDijet);
+  }
+
+  bool failsIhFracCut(float emFrac, float ohFrac);
+  {
+    return frcem + frcoh < 0.65;
+  }
+
+  bool failsdPhiCut(float dPhi, bool isDijet)
+  {
+    return dPhi < 3*M_PI/4 && isDijet;
+  }
 
   int Init(PHCompositeNode *topNode) override;
 
@@ -35,8 +50,10 @@ class jetBackgroundCut : public SubsysReco
 
 
  private:
-  unsigned char _cutBits;
-  recoConsts *rc;
+  recoConsts *_rc;
+  bool _doAbort;
+  string _name;
+  bool _debug;
 };
 
 #endif // R24TREEMAKER
