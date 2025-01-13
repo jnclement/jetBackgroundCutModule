@@ -2,15 +2,24 @@ This module checks a set of cuts on jets to improve the quality of the sample (r
 
 Parameters for instantiation are:
 jet node name (required)
-module name (has default ")
+module name (has default "jetBackgroundCutModule")
 do debug (default to 0; increase for more verbosity)
 do abort (default to false, does not abort events which fail cuts)
+
+Example instantiation and registration with all parameters:
+
+jetBackgroundCut* jbc = new jetBackgroundCut("Anti-kT_R04_Jets","jetBackgroundCutModule",0,false);
+se->registerSubsystem(jbc);
+
+Example minimal instantiation:
+
+jetBackgroundCut* jbc = new jetBackgroundCut("Anti-kT_R04_Jets");
 
 If do abort is false, the module will add intflags to recoconsts named:
 failsLoEmJetCut
 failsHiEmJetCut
 failsIhJetCut
-failsAnyJetCut (OR of the other three)
+failsAnyJetCut = (OR of the other three)
 
 required nodes:
 one of either GlobalVertexMapv1 (named GlobalVertexMap) or MbdVertexMapv1 (named MbdVertexMap)
